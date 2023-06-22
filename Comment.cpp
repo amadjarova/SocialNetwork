@@ -1,7 +1,8 @@
+
 #include "Comment.h"
 #include "HelperFunctions.h"
 #include <fstream>
-Comment::Comment(const MyString _authorFirstName, const MyString& _authorLastName,const MyString& _content, unsigned _ID):authorFirstName(_authorFirstName),authorLastName(_authorLastName) ,commentText(_content),ID(_ID)
+Comment::Comment(const MyString _authorFirstName, const MyString& _authorLastName, const MyString& _content, unsigned _ID) :authorFirstName(_authorFirstName), authorLastName(_authorLastName), commentText(_content), ID(_ID)
 {
 
 }
@@ -42,17 +43,19 @@ void Comment::saveToBinaryFile(std::ofstream& ofs) const
 
 	ofs.write((const char*)&usersDownvoteIDSize, sizeof(usersDownvoteIDSize));
 	for (size_t i = 0; i < usersDownvoteIDSize; ++i) {
-		ofs.write((const char*)&usersDownvoteID[i], sizeof(unsigned));
+		unsigned currentID = usersDownvoteID[i];
+		ofs.write((const char*)&currentID, sizeof(unsigned));
 	}
 
 	ofs.write((const char*)&usersUpvoteIDSize, sizeof(usersUpvoteIDSize));
 	for (size_t i = 0; i < usersUpvoteIDSize; ++i) {
-		ofs.write((const char*)&usersUpvoteID[i], sizeof(unsigned));
+		unsigned currentID=usersUpvoteID[i];
+		ofs.write((const char*)&currentID, sizeof(unsigned));
 	}
 
 	ofs.write((const char*)&numberOfComments, sizeof(numberOfComments));
 
-	for(size_t i = 0; i < numberOfComments; ++i) {
+	for (size_t i = 0; i < numberOfComments; ++i) {
 		comments[i]->saveToBinaryFile(ofs);
 	}
 
@@ -84,14 +87,11 @@ void Comment::readFromBinaryFile(std::ifstream& ifs)
 	}
 	ifs.read((char*)&numberOfComments, sizeof(numberOfComments));
 
-	for (size_t i = 0; i < numberOfComments; ++i) {
-		Comment* current = new Comment();
-
-		current->readFromBinaryFile(ifs);
-		SharedPtr<Comment> a(current);
-		comments.push_back(current);
-		//comments[i]->readFromBinaryFile(ifs);
-		delete current;
+	for (size_t i = 0; i < numberOfComments; ++i)
+	{
+		SharedPtr<Comment> a(new Comment());
+		a->readFromBinaryFile(ifs);
+		comments.push_back(a);
 	}
 
 }
@@ -101,13 +101,13 @@ void Comment::comment(const MyString& authorFirstName, const MyString& authorLas
 	std::cout << ">Say something: ";
 	char commentText[1024];
 	std::cin.getline(commentText, 1024);
-	Comment* comm= new Comment(authorFirstName, authorLastName, commentText, allCommsCount);
+	Comment* comm = new Comment(authorFirstName, authorLastName, commentText, allCommsCount);
 	comments.push_back(comm);
 	std::cout << "Posted! " << std::endl;
 	allCommsCount++;
 }
 
-void Comment::searchCommentToReply(unsigned _ID,const MyString& authorFirstName, const MyString& authorLastName, bool& foundComm, unsigned& allCommentsCount)
+void Comment::searchCommentToReply(unsigned _ID, const MyString& authorFirstName, const MyString& authorLastName, bool& foundComm, unsigned& allCommentsCount)
 {
 	for (size_t i = 0; i < comments.getSize(); i++)
 	{
@@ -147,62 +147,62 @@ void Comment::searchCommToVote(unsigned _ID, bool& commFound, unsigned userID, c
 			break;
 		}
 	}
-	
+
 }
 
 void Comment::vote(unsigned userID, const CommentAction& voteType)
 {
 	bool IDFound = false;
-		for (size_t i = 0; i < usersDownvoteID.getSize(); i++)
+	for (size_t i = 0; i < usersDownvoteID.getSize(); i++)
+	{
+		if (usersDownvoteID[i] == userID)
 		{
-			if (usersDownvoteID[i] == userID)
+			if (voteType == CommentAction::DOWNVOTE)
 			{
+				IDFound = true;
+				usersDownvoteID.erase(i);
+				break;
+			}
+			else
+			{
+				IDFound = true;
+				usersDownvoteID.erase(i);
+				usersUpvoteID.push_back(userID);
+				break;
+			}
+		}
+
+	}
+	if (!IDFound)
+	{
+		for (size_t i = 0; i < usersUpvoteID.getSize(); i++)
+		{
+			if (usersUpvoteID[i] == userID)
+			{
+				IDFound = true;
 				if (voteType == CommentAction::DOWNVOTE)
 				{
-					IDFound = true;
-					usersDownvoteID.erase(i);
+					usersUpvoteID.erase(i);
+					usersDownvoteID.push_back(userID);
 					break;
 				}
 				else
 				{
-					IDFound = true;
-					usersDownvoteID.erase(i);
-					usersUpvoteID.push_back(userID);
+					usersUpvoteID.erase(i);
 					break;
 				}
 			}
-			
 		}
-		if (!IDFound)
+	}
+	if (!IDFound)
+	{
+		if (voteType == CommentAction::UPVOTE)
 		{
-			for (size_t i = 0; i < usersUpvoteID.getSize(); i++)
-			{
-				if (usersUpvoteID[i] == userID)
-				{
-					IDFound = true;
-					if (voteType == CommentAction::DOWNVOTE)
-					{
-						usersUpvoteID.erase(i);
-						usersDownvoteID.push_back(userID);
-						break;
-					}
-					else
-					{
-						usersUpvoteID.erase(i);
-						break;
-					}
-				}
-			}
+			usersUpvoteID.push_back(userID);
 		}
-		if (!IDFound)
+		else if (voteType == CommentAction::DOWNVOTE)
 		{
-			if (voteType == CommentAction::UPVOTE)
-			{
-				usersUpvoteID.push_back(userID);
-			}
-			else if (voteType == CommentAction::DOWNVOTE)
-			{
-				usersDownvoteID.push_back(userID);
-			}
+			usersDownvoteID.push_back(userID);
 		}
+	}
 }
