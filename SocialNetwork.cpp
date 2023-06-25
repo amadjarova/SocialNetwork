@@ -36,7 +36,7 @@ void SocialNetwork::signup()
 		}
 	}
 	User user(firstName, lastName, password, users.getSize());
-	users.push_back(user);
+	users.push_back(std::move(user));
 	std::cout << "Success! " << std::endl;
 }
 
