@@ -18,9 +18,11 @@ class SocialNetwork
 {
 	Vector<User> users;
 	TopicsList list;
-	
+
 	bool isPasswordTaken(const MyString& _password) const;
 	Status runCommands(unsigned userIndex);
+	Status openTopic(unsigned userIndex, unsigned topicIndex);
+	Status openPost(unsigned userIndex, unsigned topicIndex, unsigned postIndex);
 	void readFromBinaryFile();
 	void saveToBinaryFile()const;
 public:
@@ -30,4 +32,3 @@ public:
 	Status login();
 
 };
-

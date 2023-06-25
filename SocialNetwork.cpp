@@ -1,6 +1,6 @@
 #include "SocialNetwork.h"
 #include <fstream>
-bool SocialNetwork::isPasswordTaken(const MyString& _password) const 
+bool SocialNetwork::isPasswordTaken(const MyString& _password) const
 {
 	unsigned usersCount = users.getSize();
 	for (size_t i = 0; i < usersCount; i++)
@@ -18,7 +18,7 @@ void SocialNetwork::signup()
 	std::cout << "Enter first name: ";
 	MyString firstName;
 	std::cin >> firstName;
-	std::cout << std::endl<<"Enter last name: ";
+	std::cout << std::endl << "Enter last name: ";
 	MyString lastName;
 	std::cin >> lastName;
 	std::cout << std::endl << "Enter password: ";
@@ -28,7 +28,7 @@ void SocialNetwork::signup()
 		std::cin >> password;
 		if (isPasswordTaken(password))
 		{
-			std::cout << "This password is taken. Please enter new password."<<std::endl;
+			std::cout << "This password is taken. Please enter new password." << std::endl;
 		}
 		else
 		{
@@ -58,7 +58,7 @@ Status SocialNetwork::login()
 				if (users[i].getPassword() == password)
 				{
 					std::cout << "Welcome back, " << users[i].getFirstName() << " " << users[i].getLastName() << "!" << std::endl;
-					
+
 					return runCommands(i);
 				}
 			}
@@ -69,7 +69,7 @@ Status SocialNetwork::login()
 
 void SocialNetwork::saveToBinaryFile() const
 {
-	std::ofstream ofs("file.dat", std::ios::out| std::ios::binary|std::ios::trunc);
+	std::ofstream ofs("file.dat", std::ios::out | std::ios::binary | std::ios::trunc);
 	if (!ofs.is_open())
 	{
 		throw "Error with opening the file.";
@@ -92,16 +92,146 @@ void SocialNetwork::readFromBinaryFile()
 	{
 		return;
 	}
-	unsigned vectSize=0;
+	unsigned vectSize = 0;
 	ifs.read((char*)&vectSize, sizeof(unsigned));
 	for (size_t i = 0; i < vectSize; i++)
 	{
 		User current;
 		current.readFromBinaryFile(ifs);
-		users.push_back(current);
+		users.push_back(std::move(current));
 	}
 	list.readFromBinaryFile(ifs);
 	ifs.close();
+}
+
+Status SocialNetwork::openPost(unsigned userIndex, unsigned topicIndex, unsigned postIndex) 
+{
+	char buff[ARR_LEN];
+	std::cout << "Q: " << list.topics[topicIndex].posts[postIndex].getTitle() << std::endl;
+	while (true)
+	{
+		std::cin.getline(buff, ARR_LEN);
+		char command[ARR_LEN];
+		HelperFunctions::findCommand(buff, command);
+		if (strcmp(command, ">p_close") == 0)
+		{
+			std::cout << "You just left \"" << list.topics[topicIndex].posts[postIndex].getTitle() << "\"!" << std::endl;
+			return Status::RUNNING;
+		}
+		else if (strcmp(command, ">comments") == 0)
+		{
+			list.topics[topicIndex].posts[postIndex].printComments();
+		}
+		else if (strcmp(command, ">comment") == 0)
+		{
+			list.topics[topicIndex].posts[postIndex].comment(users[userIndex].getFirstName(), users[userIndex].getLastName());
+			users[userIndex].points++;
+		}
+		else if (strcmp(command, ">reply") == 0 || strcmp(command, ">upvote") == 0 || strcmp(command, ">downvote") == 0)
+		{
+			if (!HelperFunctions::isNumber(buff, strlen(command) + 1, strlen(buff) - 1))
+			{
+				throw "The ID must be a number";
+			}
+			unsigned commentID = HelperFunctions::fromStrToNum(buff, strlen(command) + 1, strlen(buff) - 1);
+			bool commFound = false;
+			if (strcmp(command, ">reply") == 0)
+			{
+				list.topics[topicIndex].posts[postIndex].reply(commentID, commFound, users[userIndex].getFirstName(), users[userIndex].getLastName());
+			}
+			else if (strcmp(command, ">downvote") == 0)
+			{
+				list.topics[topicIndex].posts[postIndex].vote(commentID, CommentAction::DOWNVOTE, userIndex, commFound);
+			}
+			else
+			{
+				list.topics[topicIndex].posts[postIndex].vote(commentID, CommentAction::UPVOTE, userIndex, commFound);
+			}
+			if (!commFound)
+			{
+				throw "Comment not found.";
+			}
+		}
+		else if (strcmp(command, ">exit") == 0)
+		{
+			return Status::EXIT;
+		}
+		else if (strcmp(command, ">logout") == 0)
+		{
+			std::cout << "Goodbye, " << users[userIndex].getFirstName() << " " << users[userIndex].getLastName() << "!" << std::endl;
+			return Status::LOGOUT;
+		}
+		else
+		{
+			std::cout << "Invalid command." << std::endl;
+		}
+	}
+
+}
+
+Status SocialNetwork::openTopic(unsigned userIndex, unsigned topicIndex)
+{
+	char buff[ARR_LEN];
+	std::cout << "Welcome to \"" << list.topics[topicIndex].getTitle() << "\"" << std::endl;
+	while (true)
+	{
+		std::cin.getline(buff, ARR_LEN);
+		char command[ARR_LEN];
+		HelperFunctions::findCommand(buff, command);
+		if (strcmp(command, ">list") == 0)
+		{
+			list.topics[topicIndex].printAllPostsTitleAndID();
+		}
+		else if (strcmp(command, ">post") == 0)
+		{
+
+			list.topics[topicIndex].post();
+
+		}
+		else if (strcmp(command, ">p_open") == 0)
+		{
+			unsigned postIndex;
+			if (HelperFunctions::isNumber(buff, strlen(command) + 1, strlen(buff) - 1))
+			{
+				postIndex = HelperFunctions::fromStrToNum(buff, strlen(command) + 1, strlen(buff) - 1);
+			}
+			else
+			{
+				char postTitle[ARR_LEN];
+				HelperFunctions::getSubstr(buff, postTitle, strlen(command) + 1, strlen(buff) - 1);
+				postIndex = list.topics[topicIndex].findPostIndex(postTitle);
+			}
+			if (postIndex >= list.topics[topicIndex].posts.getSize())
+			{
+				std::cout << "There is no such post." << std::endl;
+				continue;
+			}
+			switch (openPost(userIndex, topicIndex, postIndex))
+			{
+				case Status::LOGOUT: return Status::LOGOUT;break;
+				case Status::EXIT: return Status::EXIT;break;
+			}
+		}
+		else if (strcmp(command, ">quit") == 0)
+		{
+			std::cout << "You just left topic \"" << list.topics[topicIndex].getTitle() << "\"!" << std::endl;
+			return Status::RUNNING;
+		}
+		else if (strcmp(command, ">exit") == 0)
+		{
+			return Status::EXIT;
+		}
+		else if (strcmp(command, ">logout") == 0)
+		{
+			std::cout << "Goodbye, " << users[userIndex].getFirstName() << " " << users[userIndex].getLastName() << "!" << std::endl;
+			return Status::LOGOUT;
+		}
+		else
+		{
+			std::cout << "Invalid command." << std::endl;
+		}
+	}
+
 }
 
 Status SocialNetwork::runCommands(unsigned userIndex)
@@ -109,11 +239,10 @@ Status SocialNetwork::runCommands(unsigned userIndex)
 	std::cin.ignore();
 	while (true)
 	{
-		char buff[1024];
-		std::cin.getline(buff, 1024);
-		char command[1024];
+		char buff[ARR_LEN];
+		std::cin.getline(buff, ARR_LEN);
+		char command[ARR_LEN];
 		HelperFunctions::findCommand(buff, command);
-
 
 		if (strcmp(command, ">open") == 0)
 		{
@@ -124,7 +253,7 @@ Status SocialNetwork::runCommands(unsigned userIndex)
 			}
 			else
 			{
-				char topicTitle[1024];
+				char topicTitle[ARR_LEN];
 				HelperFunctions::getSubstr(buff, topicTitle, strlen(command) + 1, strlen(buff) - 1);
 				topicIndex = list.findTopicIndex(topicTitle);
 			}
@@ -133,120 +262,20 @@ Status SocialNetwork::runCommands(unsigned userIndex)
 				std::cout << "There is no such topic." << std::endl;
 				continue;
 			}
-			std::cout << "Welcome to \"" << list.topics[topicIndex].getTitle() << "\"" << std::endl;
-			while (true)
+			switch (openTopic(userIndex, topicIndex))
 			{
-				std::cin.getline(buff, 1024);
-				char command[1024];
-				HelperFunctions::findCommand(buff, command);
-				if (strcmp(command, ">list") == 0)
-				{
-					list.topics[topicIndex].printAllPostsTitleAndID();
-				}
-				else if (strcmp(command, ">post") == 0)
-				{
-
-					list.topics[topicIndex].post();
-				
-				}
-				else if (strcmp(command, ">p_open") == 0)
-				{
-					unsigned postIndex;
-					if (HelperFunctions::isNumber(buff, strlen(command) + 1, strlen(buff) - 1))
-					{
-						postIndex = HelperFunctions::fromStrToNum(buff, strlen(command) + 1, strlen(buff) - 1);
-					}
-					else
-					{
-						char postTitle[1024];
-						HelperFunctions::getSubstr(buff, postTitle, strlen(command) + 1, strlen(buff) - 1);
-						postIndex = list.topics[topicIndex].findPostIndex(postTitle);
-					}
-					if (postIndex >= list.topics[topicIndex].posts.getSize())
-					{
-						std::cout << "There is no such post." << std::endl;
-						continue;
-					}
-					std::cout<<"Q: "<<list.topics[topicIndex].posts[postIndex].getTitle()<<std::endl;
-					while (true)
-					{
-						std::cin.getline(buff, 1024);
-						char command[1024];
-						HelperFunctions::findCommand(buff, command);
-						if (strcmp(command, ">p_close")==0)
-						{
-							std::cout<<"You just left \""<<list.topics[topicIndex].posts[postIndex].getTitle()<< "\"!" << std::endl;
-							break;
-						}
-						else if (strcmp(command, ">comments")==0)
-						{
-							list.topics[topicIndex].posts[postIndex].printComments();
-						}
-						else if (strcmp(command, ">comment")==0)
-						{
-							list.topics[topicIndex].posts[postIndex].comment(users[userIndex].getFirstName(), users[userIndex].getLastName());
-							users[userIndex].points++;
-						}
-						else if (strcmp(command, ">reply")==0||strcmp(command, ">upvote")==0||strcmp(command, ">downvote")==0)
-						{
-							if (!HelperFunctions::isNumber(buff, strlen(command) + 1, strlen(buff) - 1))
-							{
-								throw "The ID must be a number";
-							}
-							unsigned commentID = HelperFunctions::fromStrToNum(buff, strlen(command) + 1, strlen(buff) - 1);
-							bool commFound = false;
-							if (strcmp(command, ">reply") == 0)
-							{
-								list.topics[topicIndex].posts[postIndex].reply(commentID, commFound, users[userIndex].getFirstName(), users[userIndex].getLastName());
-							}
-							else if (strcmp(command, ">downvote") == 0)
-							{
-								list.topics[topicIndex].posts[postIndex].vote(commentID, CommentAction::DOWNVOTE, userIndex, commFound);
-							}
-							else
-							{
-								list.topics[topicIndex].posts[postIndex].vote(commentID, CommentAction::UPVOTE, userIndex, commFound);
-							}
-							if (!commFound)
-							{
-								throw "Comment not found.";
-							}
-						}
-						else if (strcmp(command, ">exit")==0)
-						{
-							return Status::EXIT;
-						}
-						else if (strcmp(command, ">logout")==0)
-						{
-							std::cout << "Goodbye, " << users[userIndex].getFirstName() << " " << users[userIndex].getLastName() << "!"<<std::endl;
-							return Status::LOGOUT;
-						}
-						
-					}
-				}
-				else if (strcmp(command, ">quit")==0)
-				{
-					std::cout << "You just left topic \"" << list.topics[topicIndex].getTitle() << "\"!" << std::endl;
-					break;
-				}
-				else if (strcmp(command, ">exit") == 0)
-				{
-					return Status::EXIT;
-				}
-				else if (strcmp(command, ">logout") == 0)
-				{
-					std::cout << "Goodbye, " << users[userIndex].getFirstName() << " " << users[userIndex].getLastName()<<"!"<< std::endl;
-					return Status::LOGOUT;
-				}
+				case Status::LOGOUT: return Status::LOGOUT;
+				case Status::EXIT: return Status::EXIT;
 			}
+
 		}
-		else if (strcmp(command, ">create")==0)
+		else if (strcmp(command, ">create") == 0)
 		{
 			list.createTopic(users[userIndex].getFirstName(), users[userIndex].getLastName());
 		}
 		else if (strcmp(command, ">search") == 0)
 		{
-			char searchedText[1024];
+			char searchedText[ARR_LEN];
 			HelperFunctions::getSubstr(buff, searchedText, strlen(command) + 1, strlen(buff) - 1);
 			list.searchTextInTopics(searchedText);
 		}
@@ -254,7 +283,7 @@ Status SocialNetwork::runCommands(unsigned userIndex)
 		{
 			users[userIndex].printInfo();
 		}
-		else if (strcmp(command, ">about")==0)
+		else if (strcmp(command, ">about") == 0)
 		{
 			if (!HelperFunctions::isNumber(buff, strlen(command) + 1, strlen(buff) - 1))
 			{
@@ -273,8 +302,12 @@ Status SocialNetwork::runCommands(unsigned userIndex)
 		}
 		else if (strcmp(command, ">logout") == 0)
 		{
-			std::cout << "Goodbye, " << users[userIndex].getFirstName() << " " << users[userIndex].getLastName()<<"!"<<std::endl;
+			std::cout << "Goodbye, " << users[userIndex].getFirstName() << " " << users[userIndex].getLastName() << "!" << std::endl;
 			return Status::LOGOUT;
+		}
+		else
+		{
+			std::cout << "Invalid command." << std::endl;
 		}
 
 	}
