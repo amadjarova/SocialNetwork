@@ -14,14 +14,14 @@ unsigned Post::getID() const
 {
 	return ID;
 }
- 
+
 void Post::comment(const MyString& authorFirstName, const MyString& authorLastName)
 {
 	std::cout << ">Say something: ";
 	char commentText[1024];
 	std::cin.getline(commentText, 1024);
 	Comment comm(authorFirstName, authorLastName, commentText, allCommCount);
-	comments.push_back(comm);
+	comments.push_back(std::move(comm));
 	std::cout << "Posted! " << std::endl;
 	allCommCount++;
 }
@@ -57,7 +57,7 @@ void Post::readFromBinaryFile(std::ifstream& ifs)
 	{
 		Comment current;
 		current.readFromBinaryFile(ifs);
-		comments.push_back(current);
+		comments.push_back(std::move(current));
 	}
 }
 
@@ -75,7 +75,7 @@ void Post::reply(unsigned _ID, bool& found, const MyString& authorFirstName, con
 	{
 		if (comments[i].ID == _ID)
 		{
-			comments[i].comment(authorFirstName, authorLastName,allCommCount);
+			comments[i].comment(authorFirstName, authorLastName, allCommCount);
 			found = true;
 			break;
 		}
@@ -92,21 +92,21 @@ void Post::reply(unsigned _ID, bool& found, const MyString& authorFirstName, con
 
 void Post::vote(unsigned _ID, const CommentAction& voteType, unsigned userID, bool& commFound)
 {
-		for (size_t i = 0; i < comments.getSize(); i++)
+	for (size_t i = 0; i < comments.getSize(); i++)
+	{
+		if (comments[i].ID == _ID)
 		{
-			if (comments[i].ID == _ID)
-			{
-				comments[i].vote(userID, voteType);
-				commFound = true;
-				break;
-			}
-			else
-			{
-				comments[i].searchCommToVote(_ID, commFound, userID, voteType);
-			}
-			if (commFound)
-			{
-				break;
-			}
+			comments[i].vote(userID, voteType);
+			commFound = true;
+			break;
 		}
+		else
+		{
+			comments[i].searchCommToVote(_ID, commFound, userID, voteType);
+		}
+		if (commFound)
+		{
+			break;
+		}
+	}
 }

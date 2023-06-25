@@ -1,8 +1,8 @@
 #include "Topic.h"
 
-Topic::Topic(const MyString& _title,const MyString& _creatorFirstName,const MyString& _creatorLastName,const MyString& _description, unsigned indexInArr):title(_title), creatorFirstName(_creatorFirstName), creatorLastName(_creatorLastName), description(_description), ID(indexInArr), posts(4)
+Topic::Topic(const MyString& _title, const MyString& _creatorFirstName, const MyString& _creatorLastName, const MyString& _description, unsigned indexInArr) :title(_title), creatorFirstName(_creatorFirstName), creatorLastName(_creatorLastName), description(_description), ID(indexInArr), posts(4)
 {
-	
+
 }
 
 void Topic::printTitleAndID() const
@@ -56,7 +56,7 @@ void Topic::readFromBinaryFile(std::ifstream& ifs)
 	{
 		Post current;
 		current.readFromBinaryFile(ifs);
-		posts.push_back(current);
+		posts.push_back(std::move(current));
 	}
 }
 
@@ -83,7 +83,7 @@ void Topic::post()
 
 	Post post(postTitle, postContent, index);
 	posts.push_back(std::move(post));
-	std::cout << "Success!"<<std::endl;
+	std::cout << "Success!" << std::endl;
 }
 
 void Topic::printInfo()const

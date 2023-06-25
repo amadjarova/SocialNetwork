@@ -91,7 +91,7 @@ void Comment::readFromBinaryFile(std::ifstream& ifs)
 	{
 		SharedPtr<Comment> a(new Comment());
 		a->readFromBinaryFile(ifs);
-		comments.push_back(a);
+		comments.push_back(std::move(a));
 	}
 
 }
@@ -101,8 +101,8 @@ void Comment::comment(const MyString& authorFirstName, const MyString& authorLas
 	std::cout << ">Say something: ";
 	char commentText[1024];
 	std::cin.getline(commentText, 1024);
-	Comment* comm = new Comment(authorFirstName, authorLastName, commentText, allCommsCount);
-	comments.push_back(comm);
+	SharedPtr<Comment> comm(new Comment(authorFirstName, authorLastName, commentText, allCommsCount));
+	comments.push_back(std::move(comm));
 	std::cout << "Posted! " << std::endl;
 	allCommsCount++;
 }
