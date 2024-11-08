@@ -1,6 +1,6 @@
 # SocialNetwork
 
-This is a social network system where users can ask questions. This question can be of any kind and precisely for our reason the social network will support different topics. Data is stored in files.
+This is a social network system where users can ask questions. This question can be of any kind and for this reason the social network will support different topics. Data is stored in files.
 
 ## Commands
 - `signup` 
